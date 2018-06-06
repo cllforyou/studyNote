@@ -1,0 +1,22 @@
+1.Spring的本质是管理软件中的对象，如何创建对象和维护对象之间的关系
+2.spring中的bean
+主要属性
+id 
+name
+class
+alias别名
+init-method 初始化回调方法
+destory-method 销毁回调方法
+lazy-init 属性值为true时表示延迟初始化，在ApplicationContext的实现的默认行为是在启动时就将所有singleton bean提前进行实例化
+depends-on 指定bean中对另一个bean有依赖的关系，属性值是另一个bean的id值，可以有多个，用逗号隔开
+
+IOC 控制反转，就是将对象的创建方式由最初的new转变为第三方框架创建、注入（这是一种思想）
+spring框架采用依赖注入DI实现了IOC，DI是一项技术。
+DI有两种注入方式
+setter注入
+就是调用bean中的setter方法
+构造器注入
+就是通过bean中有参构造方法实现注入
+
+自动装配
+利用注解

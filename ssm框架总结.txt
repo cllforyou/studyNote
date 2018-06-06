@@ -1,0 +1,722 @@
+﻿1.spring的IOC
+	控制反转，就是将创建对象的权利交给spring容器来管理
+
+2.IOC具体的实现步骤
+	1.创建实体类
+	2.编写配置文件（1.配置文件的头 2.编写实体内容）applicationContext
+	3.启动spring容器 ApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+	4.获取对象，调用相应的方法
+
+3.springIOC的工作原理
+	当Spring容器启动时会加载applicationContext.xml配置文件，配置文件按行解析，直到解析到bean时，会根据class类型通过反射调用来创建对象，并且存入spring内容维护的map中，新生成的对象当做value,id的值当做key。
+    Spring容器解析xml时，直到整个xml解析完毕，并且没有任何错误时，容器才算正确启动，一旦解析发现异常。整个容器启动停止。
+
+4.spring获取对象的方法
+	1.通过ID（建议使用）
+	context.getBean("hello1");
+	2.通过class（当class类型重复出现在bean中时会报错的 find two）
+	context.getBean(Hello.class);
+
+5.spring创建对象的方式
+	1.通过默认的构造方法创建对象
+	注意：当编写构造方法时，一定要记住添加无参构造。
+	2.通过静态工厂创建（必须要有静态的方法）
+	先创建一个工厂类 再在工厂类中添加一个静态的方法来获取对象，最后编写配置文件
+	<bean id="" class="" factory-method="静态方法的名称"></bean>
+	3.实例工厂创建对象
+	先创建出工厂对象本身，然后调用工厂方法，创建出相应的对象。
+	实例工厂中没有static关键字
+	4.Spring工厂创建对象
+	如果想使用Spring工厂创建对象，则必须实现接口
+    public class SpringFactory implements FactoryBean<Calendar>
+    之后只要容器加载，就会自动的调用getObject()帮助创建对象
+
+6.spring中默认的创建的兑对象都是单例的 spring只管理单例的对象,多例对象只创建不维护
+	<!--可以通过scope属性来设定对象创建的方式
+	scope="singleton"  单例对象 scope="prototype"  对象是多例的
+  	--> 
+	<bean id="student" class="domain.Student" scope="prototype"/>如果scope属性默认不写那么对象创建的方式就是单例的。
+
+7.懒加载 当需要时创建出对象，降低容器的压力
+	lazy-init="false" 懒加载不生效
+	lazy-init="true"  表示懒加载生效
+	全局变量配置 在beans中 default-lazy-init="true"
+	当scope属性为prototype多例对象时统统懒加载，这时lazy-init将不起作用。
+	当多例对象时，如果用户需要使用该对象，那么spring就会创建该对象，并且交给用户使用，至此不在负责该对象的生命周期。如果再次创建该对象，就会在内存的map中覆盖原有的对象。为用户提供一个全新的对象。
+
+8.DI（依赖注入）就是为属性赋值
+	注入方式有两种
+	set注入 要求实体类中有对应的set方法
+	<bean id="student" class="domain.Student">
+		<property name="name" value="小炮"></property>
+		<property name="age" value="15"></property>
+		<property name="teacher" ref="teachar"></property>
+	</bean>
+	
+	构造方法注入
+	<bean id="person" class="bean.Person">
+		<!--
+			index参数位置  从0开始
+			name 构造方法中参数的名称
+			ref  引入类型
+			value 直接赋值
+			type 赋值参数的类型    spring中的类型会自动的转换
+			虽然通过index 和name属性都可以为属性赋值，但是最好使用index 这样可以在，
+			没有导入源码的条件下，页面保证赋值的正确。
+		  -->
+		<constructor-arg index="0" value="1610"></constructor-arg>
+		<constructor-arg index="1" value="1610班"></constructor-arg>
+		<constructor-arg index="2" ref="user"></constructor-arg>
+	</bean>
+	注意：使用spring构造方法注入时，构造参数的个数，应该和构造方法的个数保持一致，如果不一致 必然报错。
+	
+9.SpringIOC和DI的意义
+	使用IOC和DI可以决绝代码中的耦合性问题。可以通过少量的配置实现代码的松耦合。将来即使实现类发生了改变。那么只需要修改配置文件即可。代码丝毫都不需要修改。代码的扩展性好。
+
+10.Parent属性
+	指明类之间的子父级关系 parent="父类的id"
+
+11.简化spring的配置
+	自动的装配过程，只要是一些引用类型的属性注入，都可以使用自动装配来完成注入。
+	autowire="byName" 通过属性名称进行注入
+	原理：1：首先会找到当前bean的全部set方法    setCat()
+		2: setCat变形  ~~~~ 将set去掉并且首字母小写~~~~cat属性名称
+		3； 根据cat属性的名称 匹配bean标签中的ID
+		4. 如果匹配成功 则正确注入  如果匹配不成功 则不管为null
+	autowire="byType"  会根据属性的类型去匹配bean中的Class
+	原理：
+	1：首先会找到当前bean的全部set方法    setCat()
+	2: setCat变形  ~~~~ 将set去掉并且首字母小写~~~~cat属性名称~~~~找到属性的Class类型
+	3：根据属性的Class类型 与bean中的class匹配。如果匹配成功则注入， 反之为null;
+	 2.全局的autowire配置
+	如果全局配置了自动装配，那么bean中无需配置，都会按照全局的配置进行装配
+    default-autowire="byName"
+
+12.属性注解(要加什么注解，基本都要引入相应的头文件，导入加上相应的文档)
+	1.修改头文件 引入头文件
+	http://www.springframework.org/schema/context    
+    http://www.springframework.org/schema/context/spring-context-3.2.xsd
+	2.注解的使用
+	 <!--启动属性注解  -->
+           <context:annotation-config/>
+
+	@Autowired：
+	内部有两种匹配规则，先根据属性的名称匹配bean的ID,如果匹配成功，则正确注入。如果匹配不成功则按照属性的类型class去匹配bean中的Class类型。如果class类型匹配成功了则正确注入，如果匹配不成功呢，说明bean不存在。之后报错。
+	指定Bean的Id匹配
+	@Autowired
+	@Qualifier(value="dogA")
+	private Dog dog;
+
+	@Resource 这是Autowired的升级版，可以指定id进行匹配，以后建议使用这个
+	@Resource("bean的ID")
+
+13.类的注解：类的注解其作用就是代替bean标签，简化spring的配置文件
+	使用步骤：
+	1.开启包扫描
+	 <context:component-scan base-package="bean"/>
+	2.添加注解
+	@Component
+	原理：只要开启了包扫描，spring容器在启动时 先会扫描指定的包，扫描该包以及其子孙包中含有@Component注解的类，并为其创建对象，并且默认条件下生成的ID就是类名首字母小写（person）,将生成的对象和ID保存在Spring容器自身维护的Map中。
+	使用类的注解默认生成类的id是根据类的第二个字母决定的，如果第二个字母大写则首字母大写，如果第二个字母小写，则首字母小写。我们还可以指定类对应的bean的id
+	@Component(value="aaa")   value值表示该对象对对应的Key为aaa
+	同类型的注解
+	@Controller ------web层的注解
+	@Service      -------Service层的注解
+	@Repository  ------Dao层的注解
+	其用法和@Component一致
+
+14.注解属性赋值
+	@Value("XXX")
+	Private int id ----通过@Value注解 实现基本类型赋值
+	为集合赋值
+	通过工具类 <util:list id=""><value><value></util:list>
+
+15.引入外部配置文件
+    <context:property-placeholder location="classpath:/1610.properties"/>
+    其中的location表示具体的路径 其用处是在以后可以引入数据库的连接需要的url user pwd等配置信息
+    如何为属性赋值：
+	@Value("${配置文件中的Key}")
+
+16：使用注解实现三层架构
+	Spring的IOC和DI能够最大程度上解决程序之间的耦合性问题，并且配置面向接口编程，使程序的扩展性能特别的强，以后建议大家使用IOC+DI+面向接口编程。
+	在spring中使用注解可以极大的简化xml的配置，提交开发效率，以后在编写过程中建议使用注解形式。
+
+17.代理模式的特点
+	1.定义接口（接口中定义的方法将来会被实现  看起来和被代理者一模一样） 也就是面向接口的编程
+	2.完成本职工作(执行目标方法)
+	3.完成额外的操作 这就是代理的精髓所在，就是要完成额外的操作
+
+18.静态代理
+	传统模式的缺点在于处理事务的代码大量的重复，开发效率低 处理事务的代码和处理业务的代码紧紧耦合在一起，这样做是非常危险的 
+	静态代理就是一种思想 实际操作中用不到这种模式，因为他需要为每一个类都要创建一个对应的代理类，这样的工作量太大了
+
+19.动态代理
+	分类： JDK的动态代理  Cglib的动态代理
+
+	JDK的动态代理
+	1.能够实现代码的松耦合，并且能够解决代码重复性的问题。
+	2.需要被代理者必须实现接口  面向接口编程
+	3.动态代理模式只能处理一类业务，如果处理业务不同，需要重新编写动态代理。
+	实现步骤：
+		创建代理类，里面要包含获取代理对象的方法
+		Object getObject(final Object target,final TrnsactionManger tx);  
+		该方法中包含用Proxy类中的newProxyInstance方法来获取代理对象，该方法需要传入两			个参数，
+		target.getClss().getClassLoader(),这个参数的用处是为了确定生成哪个接口的代理		对象
+		newInvocationHandler() {
+			//唯一的方法
+			public Object invoke(Object proxy,Method method,Object[] args)
+				throws Throwable {
+				Object result = null;
+				try {
+					tx.begin();
+					result = method.invoke(target,args);//执行目标的方法
+					tx.commit();
+				}catch (Exception e) {
+					tx.rollback();
+				}
+				return result;	
+			}
+		}
+		
+	Cglib的动态代理  生成的代理对象是目标对象的子类
+		使用cglib动态代理模式，即使被代理者没有实现接口，也可以为其创建代理对象
+		jdk创建代理对象的速度较快，cglib创建代理对象的速度较慢
+		jdk的动态代理需要实现----InvocationHandler接口
+		cglib的动态代理需要实现--MrthodInterceptor接口
+		创建代理对象的步骤
+		1.创建增强器
+		Enhancer enhancer = new Enhancer();
+		2.设置接口 没有接口就不需要设置了
+		enhancer.setInterfaces(target.getClss().getInterfaces());
+		3.设置父类
+		enhancer.setSuperClass(target.getClss());
+		4.设置回调
+		public Object intercept(Object proxy, Method method, Object[] args,
+					MethodProxy methodProxy) throws Throwable {
+				Object result = null;
+				try {
+					tx.begin();
+					result = method.invoke(target, args);	//让目标方法执行
+					tx.commit();
+				} catch (Exception e) {
+					tx.rollback();
+				}
+				
+				
+				return result;
+			}
+		});
+		5.创建代理对象
+		return enhancer.create();
+		说明：cglib创建的代理对象，底层通过二进制码的形式创建，并且生成的代理对象都是目标对		象的子类，并且有无接口都可以生成代理对象。
+ 
+
+20.springAOP的介绍 
+	切面（Aspect）：完成特定功能的类就是一个切面
+	连接点（Joinpoint）：客户端调用的某个特定的方法
+	通知（Advice）：就是切面中的方法（额外的工作）
+	切入点（Pointcut）：匹配连接点的断言（就是一种匹配规则）
+	目标对象（Target Object）：真正调用方法的对象
+
+	AOP的思想其实就是让一段主程序可以生长出各个分支，每一个分支可以实现额外的功能
+	实现步骤：
+		先定义一个切面，定义各种通知
+		配置文件 <aop:config> <aop:pointcut experssion="execution()" id="pc">
+		<aop:aspect ref="txAspect">   <aop:around method="around" pointcut-			ref="pc">
+		
+21.AOP的执行原理
+	当一个对象执行时 先会与切入点表达式进行匹配，如果匹配成功了，就会为这个类创建代理对象（通过动态代理模式创建  如果目标对象有接口 就使用jdk的动态代理，如果目标对象没有接口则使用  cglib生成代理对象），代理对象执行方法时 就会执行切面中的通知。		
+		
+22.AOP中的通知
+	1.前置通知（Before advice）：在目标方法执行之前执行（记录日志）
+	2.后置通知（After returning advice）：在目标方法执行之后执行
+	3.异常通知（After throwing advice）：在目标方法执行时如果抛异常就会执行异常通知。
+	4.最终通知（After (finally) advice）：不管目标方法是否执行 ，都会执行的通知。
+	以上四个通知，一般只起到程序流转的记录作用
+	5.环绕通知：在目标方法执行前后 都会执行，环绕通知是最为强大的也是用的最多的。
+	参数问题：
+		除了环绕通知之外，其余的通知全部使用import org.aspectj.lang.JoinPoint;
+	而环绕通知使用的是import org.aspectj.lang.ProceedingJoinPoint;
+		如果通知中有多个参数，JoinPoint或.ProceedingJoinPoint 必须位于参数的第一位
+	否则报错
+		配置文件中的返回参数应该与通知中的参数一致
+		异常通知中有Throwable afterThrow 可以同过该参数获取异常信息
+
+23.通知的执行规则
+	1.当异常通知执行时，后置通知将不会执行。异常通知和后置通知是互斥的。
+	2.最终通知无论如何都会被执行。
+	3.当目标方法执行时出现异常时，环绕通知的后半部分将不会被执行。
+	4.当环绕通知遇到后置通知时，如果后置通知想得到返回值，那么环绕通知必须添加return 将返回	值返回
+	5.当多个环绕通知同时执行时，其执行顺序是嵌套结构
+	joinPoint.proceed() 作用有两个 
+	1.如果有下一个通知，就执行下一个通知，
+	2.如果没有下一个通知 则执行目标方法。
+		
+24.利用AOP解决相关的问题
+	配置文件的内容
+	<!-- 开启包扫描 -->
+	<context:component-scan base-package="cn"></context:component-scan>
+	
+	<!-- 开启切面注解 -->
+	<aop:aspectj-autoproxy></aop:aspectj-autoproxy>	
+	1.异常信息的收集
+	创建切面 使用注解 @component 让spring管理该对象 @Aspect 定义该类为切面
+	@AfterThrowing(value="execution(* cn.servlet..*(..))",throwing="			throwable")	
+	public void afterThrow(JoinPoint joinPoint,Throwable throwable) {
+		String class = joinPoint.getTarget().getClss(); //目标对象所在的类
+		String method = joinPoint.getSignature().getName(); //抛出异常所在的方法
+		Class twClass = throwable.getClass(); //抛出异常的名称
+		String msg = throwable.getMessage();  //异常信息
+	｝
+	
+	2.计算servlet的各个类的各个方法的执行时间  此处需要使用的是环绕通知
+	@Around("execution(* cn.servlet..*(..))")
+	public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
+		Object obj = null;
+		Class target = joinPoint.getTarget().getClass();
+		String method = joinPoint.getSignature().getName();
+		
+		long beginTime = System.currentTimeMillis();
+		obj = joinPoint.proceed();
+		long endTime = System.currentTimeMillis();
+	}
+
+	3.事务管理
+	创建事务管理的注解
+	@Target(ElementType.METHOD) //注解的作用对象
+	@Retention(RetentionPolicy.RUNTIME) //注解的作用范围
+	public @interface Tranaction {
+
+	}
+	@Around("execution(* cn.service..*(..)) && @annotation(tran)")
+	public Object around(ProceedingJoinPoint joinPoint,Tranaction tran) 				throws Throwable {
+		Object obj = null;
+		tx.begin();
+		joinPoint.proceed();
+		tx.commit();
+		return obj;
+	}
+
+	4.权限管理 要使用环绕通知，因为要控制目标方法的执行与否
+	@Around("execution(* cn.service..*(..)) && annotation(tran)")
+	public Object around(ProceedingJoinPoint joinPoint,PrivilegeInfo tran) 				throws Throwable {
+		if(tran!=null) {
+			PrivilegeInfo info = tran;
+			//获取注解中的属性
+			String priviName = info.name();
+			//匹配是否含有该权限
+			if(pList.contains(priviName)) {
+				System.out.println("恭喜你拥有该权限");
+				obj = joinPoint.proceed();
+			}else {
+				System.out.println("您没有改权限");
+			}
+		}else {
+			//表示没有改注解    直接放行
+			obj = joinPoint.proceed();
+		}
+		return obj;
+			
+	5.实现缓存
+	//实现缓存的切面
+	private Map<Integer,User> cacheMap = new HashMap<Integer,User>();
+	
+	//因为要控制目标方法的执行，所以需要使用环绕通知
+	@Around("execution(* cn.service..*.find*(..))")
+	public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
+		User user = null;
+		int id = (Integer) joinPoint.getArgs()[0];
+		user = cacheMap.get(id);
+		if(user==null) {
+			joinPoint.proceed();//通过数据库查询
+			cacheMap.put(user.getId(), user);//将用户信息保存到map中
+		}
+		
+		return user;
+	}
+
+25.spring与JDBC的整合
+	1.配置数据源 与数据库连接的参数通过引入外部文件的方式访问到
+	<!--引入外部配置文件  -->
+      <context:property-placeholder location="classpath:/jdbc.properties"/>
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+      		<property name="driverClass" value="${c3p0.driver}"/>
+      		<property name="jdbcUrl" value="${c3p0.url}"/>
+      		<property name="user" value="${c3p0.user}"/>
+      		<property name="password" value="${c3p0.password}"/>
+      </bean>
+    2.配置JDBCTemplate模版类 使用该类可以简化操作
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+      		<!--JDBC模板类的使用需要注入 数据源 -->
+      		<property name="dataSource" ref="dataSource"/>
+      </bean>
+    3.基本用法
+    做 ’更新‘ 操作
+    JdbcTemplate jdbcTemplate = (JdbcTemplate) context.getBean("jdbcTemplate");
+    String sql = "update user set name=?,age=? where id=?";
+    int rows = jdbcTemplate.update(sql,"孙悟空",400,20); //有预编译的效果
+    做查询的操作
+    String sql = "select * from user";
+	List<Map<String, Object>> queryForList = jdbcTemplate.queryForList(sql);
+		for(Map<String, Object> map:queryForList) {
+			System.out.println(map);
+		}
+	这样返回的是一个MAP 要想返回的值是user对象 可以使用RowMapper接口解决问题
+	public class UserMapper implements RowMapper<User>{
+	@Override
+	//index 指的是当前正在处理数据的行数(内部循环处理  处理的位置)
+	public User mapRow(ResultSet resultSet, int index) throws SQLException {
+		
+		User user = new User();
+		user.setId(resultSet.getInt(1));
+		user.setName(resultSet.getString("name"));
+		user.setAge(resultSet.getInt(3));
+		
+		return user;
+	}
+	}
+	List<User> query = jdbcTemplate.query(sql,new UserMapper());
+		for(User user : query) {
+			System.out.println(user);
+		}
+	还可以自动生成mapper 不需要手动创建类 这样的创建过程比较慢，不建议使用
+	RowMapper<User> userMapper = new BeanPropertyRowMapper<User>(User.class);
+
+26.spring的声明式的事务处理
+	    配置事务管理器
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.		DataSourceTransactionManager">
+      		<!-- 注入数据源 -->
+      		<property name="dataSource" ref="dataSource"></property>
+      </bean>
+      
+      <!--配置事务通知 
+      		id="唯一标识"
+      		transaction-manager="transactionManager"   
+      		如果事务管理器的id和transactionManager
+      		一致，则可以省略不写
+       -->
+      <tx:advice id="txAdvice" transaction-manager="transactionManager">
+      		<tx:attributes>
+      			<tx:method name="add*" propagation="REQUIRED"/>
+      			<tx:method name="update*" propagation="REQUIRED"/>
+      			<tx:method name="del*" propagation="REQUIRED"/>
+      			<tx:method name="find*" propagation="SUPPORTS"/>
+      			<tx:method name="*" read-only="true"/>
+      		</tx:attributes>
+      </tx:advice>
+   	  
+   	  <!--配置事务切面  -->
+   	 <aop:config>
+   	 		<aop:pointcut expression="execution(* cn.service..*(..))" id="pc"/>
+   	 		<aop:advisor advice-ref="txAdvice" pointcut-ref="pc"/>
+   	 </aop:config>
+
+27.spring声明式的事务处理的策略
+	Spring只处理RuntimeException这样的异常，负责事务的回滚如果遇到检查异常，那么spring不负责	事务的回滚。可以指定相应的异常来绑定事务的回滚 
+	rollback-for="java.sql.SQLException" 
+
+	在spring当中不要随便添加try-catch,如果catch的范围过大，或导致spring容器不能接收到异常信	息，从而事务不能有效控制 
+
+	事务的一致性
+	如果多表关联或者多表操作。
+	场景：同时插入2张表的数据，新增user时 还要插入person表
+	如果想保证事务的一致性，必须考虑当前操作是不是在同一个事务中
+
+jQuery模块 jQuery就是js的高级函数类库，里面封装了好多方法
+
+28.jQuery的类型转换
+	因为jQuery不能包含js的所有功能，所以在有的时候需要进行类型间的转换
+	将dom对象转化为jQuery对象
+	var jQname = $(name);
+	将jQuery对象转化为dom对象
+	jQuery对象通过数组保存数据，可以通过数组取值的形式获取dom对象
+	var js1 = jQname.get(0);
+	var js2 = jQname[0];
+
+29.页面加载完成  由于html文档不需要编译执行，所以在开头写js代码的时候，要等页面加载完成才能运行
+	1.$(document).ready(function(){});
+	2.$().ready(function(){});
+	3.$(function(){   });
+
+30.jQuery的选择器
+	基本选择器
+	1.$("#myDiv")  ID选择器
+	2.$("div");      元素选择器
+	3.$(".myClass"); 类选择器
+	4.$("*")    匹配全部元素
+	5.$("div,span,p.myClass")  多条件选择器
+	层级选择器
+	1.$("form input") 在给定的祖先元素下匹配所有的后代元素
+	2.$("form > input")   在给定的父元素下匹配所有的子元素
+	3.$("label + input") 匹配紧跟在label下一个的input元素
+	4.$("form ~ input")  匹配form后边的兄弟元素。
+	基本过滤选择器
+	：first
+	:last
+	:not  div:not(在此添加条件，就能选择不含有该条件的div了)
+	内容选择器
+	1.$("div:contains('John')")   能够匹配给定的文本元素
+	2.$("td:empty")    不含子元素 或者文本为空
+	3.$("div:has(p)")  匹配含有指定元素的元素
+	4.$("td:parent")   匹配子元素或者有文本元素
+	可见性选择器
+	1.$("tr:hidden")   匹配所有的隐藏的tr元素
+	2.$("tr:visible")  匹配所有的可见的tr
+	属性选择器
+	$("div[id]")      查找div中含有id属性的元素
+	$("input[name='newsletter']").    匹配指定的属性和属性的值
+	$("input[name!='newsletter']")    匹配属性不等于XXX的元素
+	$("input[name^='news']")                  匹配属性的值以XXX开头的元素 
+	$("input[name$='letter']")              匹配属性的值以XXX结尾的元素
+	$("input[name*='man']")                     匹配属性的值含有XXX的元素
+	$("input[id][name$='man']")            需要同时满足多个条件时使用。
+	子元素选择器
+	$("ul li:nth-child(2)")   匹配ul标签的后代元素中的li标签第2个子元素。
+	$("ul li:first-child") 匹配ul标签的后代元素中的li标签第1个子元素
+	$("ul li:last-child")    匹配ul标签的后代元素中的li标签最后一个子元素
+	$("ul li:only-child")    匹配ul标签的后代元素中只有一个li的元素
+	表单对象属性
+	$("input:enabled")  匹配可用的元素
+	$("input:disabled")  匹配不可用的元素
+	$("input:checked")   匹配全部选中的元素
+	$("select option:selected")  匹配全部的
+	$("select option:selected")   匹配下拉框中选中的option
+	补充：
+	1兄弟元素 $("div").siblings()
+	2.遍历   $("div").each(function(index){});
+	index表示当前遍历的下标 
+	3.this 表示当前操作的元素
+	4.showf() 展现隐藏元素的
+	5.attr("checked", true）    使复选框选中
+	6$("#hobby").attr("checked")    可以获取指定属性的值
+	7. $("<input/>").attr("type","text")    创建标签 并且添加属性
+	8.$("p").append("XXX");   将XXX元素追加到p标签中
+	9.为input赋值 $("#p1").val("XXXXX")   
+	10. $("#pp").text();    获取文本元素的值
+	11.$("#pp").text("现在5点了 大家饿了吗？");   为文本元素赋值。
+	12.appendTo("second") 将选中的元素追加到second中
+	1.appendTo  
+	$("#first :selected").appendTo("#second"); 将选中的元素追加到second当中
+	2.parent       $("p").parent()   找到父级元素
+	3.remove       $(this).parent().remove();     删除选中元素
+	4.children     $("div").children()     获取div的所有孩子元素
+
+31.JSON串
+	JSON(JavaScript Object Notation) 是一种轻量级的数据交换格式。
+	JSON其实质就是一个字符串，但是该字符串有一定的格式，并且格式固定。
+	JSON其实就是一个种数据交互的格式。
+	JSON的键值对格式 {"key1":"value1","key2":"value2"}
+	数组格式 ["value1","value2","value3"]
+	复杂格式 就是两种模式之间的嵌套
+	{"key1":value1,"key2":"{key3:'value3'}"}
+	{key1:"value1",key2:['value1','value2']}
+	['value1','value2',{key3:'value3'}]
+
+32.JSON与对象之间的转换
+	将数组转化为JSON json串的输出会多一对 引号
+	JSONArray jsa = JSONArray.fromObject(arr);
+	转换list
+	JSONArray jsa = JSONArray.fromObject(list);
+	转换map
+	JSONObject jso = JSONObject.fromObject(map);
+	将对象转换为JSON 对象中必须添加get和set方法 如果想排除某个属性值则使用JsonConfig进行配置
+	new JsonConfig().setExcludes(new String[]{"addr","id"});
+	JSONObject jso = JSONObject.fromObject(user);
+
+	将JSON串转化为对象
+	先将JSON串转化为JSON对象 jsonUser
+	User user = (User) JSONObject.toBean(jsonUser,User.class); 
+
+33.jQuery中的AJAX
+	1.load(url,[data],[callback])
+	能够将远程的HTML代码返回，插入到指定元素中
+	Url:请求路径
+	Data:请求参数  使用JSON串
+	callback：回调函数
+	当没有参数时，默认使用get方法，如果有参数则使用POST方法
+	2.get(url, [data], [callback], [type])
+	url：请求路径
+	Data:请求参数
+	Callback:回调函数
+	Type 类型
+	3.jQuery.post(url, [data], [callback], [type])
+
+34.jQuery中的事件
+	1.blur()  离焦事件
+	2.$("td").hover(function(){"鼠标移入事件"},function(){"鼠标移出事件"})    
+ 	事件的切换   
+
+SpringMVC 前端控制框架 代理servlet干活 是spring的一大组件
+
+35.SpringMVC的组件
+	1.前端控制器        只负责request和response对象的转发
+	2.处理器映射器    将URL匹配对应的Controller
+	3.处理器适配器     执行对应的handel
+	4.视图解析器          将页面的逻辑名称，转化为对应的具体页面路径
+
+36.SpringMVC调用过程
+	1.客户发送request请求
+	localhost:8090/SpringMVC/hello.action
+	2.请求处理器映射器处理handler（找到匹配的Controller类）
+	3.返回能够处理的那个Controller类
+	4.请求处理器适配器执行handler(内部按照匹配规则执行)
+	5.执行handler(Controller-service--dao)
+	6.将处理结果进行返回，返回ModelAndView对象（model表示处理后的数据   View表示页面的逻辑名	称hello）
+	7.将ModelAndView对象返回给前端控制器
+	8.请求视图解析器解析View对象（将页面的逻辑名称,拼接成一个完整的页面路径 /WEB-INF/hello.		jsp）
+	9.将完整的页面路径再次返回值给前端控制器
+	10.将model数据填充到页面中的Request域中
+	编码时注意的事项
+	1.配置前端控制器DispatherServlet,需要在web.xml进行配置
+	2.编写action与的对应关系
+	3.默认的处理器适配器的执行   需要自己编的Controller类实现Controller接口
+	4.准备ModelAndView对象（赋值数据，返回的页面的逻辑名称）
+	5.配置视图解析器（拼接页面路径）
+
+37.SpringMVC注意的事项
+	SpringMVC的值传递问题
+	使用SpringMVC时，在进行值传递时需要注意，页面中的name属性的值应该与接收方法的参数名称一致。
+	解决中文乱码问题
+	 <!--解决中文乱码问题  -->
+	  <filter>
+	    <filter-name>characterEncoding</filter-name>
+	    <filter-class>org.springframework.web.filter.	CharacterEncodingFilter</filter-class>
+	    <init-param>
+	        <param-name>encoding</param-name>
+	        <param-value>utf-8</param-value>
+	    </init-param>
+	  </filter>
+	 
+	  <filter-mapping>
+	    filter-name>characterEncoding</filter-name>
+	    <url-pattern>/*</url-pattern>
+	  </filter-mapping>
+	
+	同名提交问题
+	如果遇到同名提交问题，那么如果接收参数为String类型时，那么将会把用户提交的信息拼接成一个字符串，
+	如果接收的参数为数组时，那么SpringMVC将会把同名提交自动的赋值到数组中
+ 
+
+	对象封装参数
+	如果参数个数较多时，可以使用对象进行封装，页面中的name属性的值应该和对象中的属性保持一致，并且	set方法不能省略，否则不能正确注入。
+
+mybatis
+	mybatis是一个持久层的框架，能够做到自动的对象关系映射。使用Sql直接操作数据库。Mybatis是半自	动的ORM     ORM:对象关系映射
+
+38.Mybatis的组件
+	sqlMapConfig.xml 核心配置文件 用于连接数据库
+	UserMapper.xml 对象的映射关系 编写sql语句
+	sqlSessionFactory
+	sqlSession CRUD
+
+39.Mybatis的简单实现步骤
+	1.配置核心配置文件 sqlMapConfig.xml 要导入DTD约束 
+	2.配置UserMapper.xml 映射文件  <mapper namespace="bean.UserMapper">
+	  配置sqlMapConfig.xml指明映射文件的路径 
+	  <mappers>
+		<mapper resource="bean/UserMapper.xml"/>
+	  </mappers> 
+	3.创建sqlSession
+	InputStream inputStream = Resource.getResourceAsStream("sqlMapConfig.xml");
+	SqlSessionFactory ssf = new SqlSessionFactoryBuilder().build(inputStream);
+	SqlSession ss = sqlSessionFactory.opeanSession();
+	ss.selectList("bean.UserMapper.findAll"); 参数为namespace+id
+
+40.Mybatis的相关注意事项
+	映射问题
+	在默认条件下 使用Mybatis时，结果集中的列名，应该与对象的属性值保持一个，如果不一致，则不能实	现赋值。
+	.动态的赋值操作
+	1.使用#{属性值}，可以实现动态的赋值，并且有预编译的效果。
+	2.会为参数添加一对“”号
+	3.如果需要使用列名为参数时，需要使用${map中的key}, 并且参数传递时需要使用Map进行传递。
+	4.通过${}获取参数时，没有预编译的效果。
+	5.只有在获取以列名为参数时才使用$,能使用#号绝不使用$符
+	mybatis中的的方法要求参数只能传递一个，如果遇到多个参数传递问题时，
+	1.通过对象传递参数
+	2.通过map进行封装 Map<key,value>
+	set标签的作用，去除多余where前边的一个“,”号
+	where条件的作用：去除where后边多余的and
+	sql标签通常将一个写重要的、复杂的sql语句进行抽取，然后通过include标签实现复用。在一定程度上	简化了sql,但是可读性变差了！
+	批量删除 用foreach标签 
+	<delete id="delIds">
+		delete from user where id in 
+		<foreach collection="array" open="(" close=")" item="id" separator=",">
+			#{id}
+		</foreach>
+	</delete>
+	接口模式 mapper层也就是dao层，采用Mybatis就不需要自己手动添加实现类了，可以通过映射文件来创	建管理
+	注意事项：
+	1.映射文件中的namespace应该指向接口的路径（包名.类名）
+	2.接口中的方法名称应该和映射文件中的sql的id必须匹配。
+	首先找到当前接口的路径，然后与namespace作匹配，如果匹配成功了则根据接口方法的名称，匹配sql的	ID如果匹配成功了则执行sql语句。
+	Mybatis中的缓存
+	一级缓存
+	sqlSession级别，在同一个sqlSession内共享数据
+	一级缓存是默认开启的
+	二级缓存  应用不太多
+	sqlSessionFactory级别 用同一个sqlSessionFactory创建的sqlSession共享数据
+	二级缓存默认是关闭的，需要手动开启
+
+41.mybatis中的自定义映射关系
+	由于在查询数据库表的过程中，结果集经常会改变列的名称，并且经常会有关联查询，这样就需要自己手动
+	定义结果集的映射关系了
+	如果结果结中的列名和对象中的属性不一致，需要通过手动封装，其中的column 指列名property指对象	中的属性。
+	
+	关联关系： 要求结果集中的列名禁止重复。
+	一对一：一个员工属于一个部门
+	<resultMap type="pojo.User" id="UserRM" autoMapping="true">
+		<id column="id" property="id"/>
+		<!--一对一封装  -->
+		<association property="dept" javaType="pojo.Dept">
+			<!-- 必须写  -->
+			<id column="dept_id" property="deptId"/>
+			<result column="dept_name" property="deptName"/>
+		</association>
+	</resultMap>
+	一对多：一个部门对应多个员工
+	<resultMap type="pojo.Dept" id="deptRM">	
+		<id column="dept_id" property="deptId"/>
+		<result column="dept_name" property="deptName"/>
+		
+		
+		<!--封装一对多  -->
+		<collection property="userList" ofType="pojo.User">
+			<id column="id" property="id"/>
+			<result column="name" property="name"/>
+			<result column="age" property="age"/>
+			<result column="sex" property="sex"/>
+		</collection>
+	</resultMap>
+	多对多：一个学生对应多个老师，一个老师对应多个学生 也就是双向的一对多
+
+42.SSM整合
+	spring的核心配置文件 applicationContext.xml service层
+	SpringMVC的核心配置文件 springMVC-servlet.xml Controller层
+	Mybatis的核心配置文件 sqlMapConfig.xml 映射文件 UserMapper.xml mapper层
+	web.xml 配置servlet 配置过滤器 配置监听器 就是让web容器控制spring容器的启动
+	spring与Mybatis的整合
+	<!-- 整合mybatis -->
+      <bean class="org.mybatis.spring.SqlSessionFactoryBean">
+      	<!-- 配置数据源 -->
+		<property name="dataSource" ref="dataSource"></property>
+		<!-- 引入核心配置文件 -->
+		<property name="configLocation" value="classpath:/sqlMapConfig.xml"></	property>
+		<!-- 引入映射文件 -->
+		<property name="mapperLocations" value="classpath:/pojo/*.xml"></property>      
+      </bean>
+      
+      <!-- 配置mapper接口 扫描mapper包  并且为接口文件创建代理对象-->
+      <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+      	<property name="basePackage" value="mapper"></property>	
+      </bean>
+
+    配置监听器
+    <!-- 配置监听器 -->
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+	
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>classpath:/applicationContext.xml</param-value>
+	</context-param>
