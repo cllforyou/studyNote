@@ -1,0 +1,14 @@
+select CONCAT((SUBSTR(result,1,INSTR(result,'@')-1)),',',isSine,',',IFNULL(NULLIF(SUBSTR(declasting,2,INSTR(declasting,']')-2),''),'0')) from record_autoresult
+
+CONCAT(column|str1, column|str2,...)：将多个字符串参数首尾相连后返回
+
+CONCAT_WS(separator,str1,str2,...)：将多个字符串参数以给定的分隔符separator首尾相连后返回
+
+SUBSTR(str,pos[,len])：从源字符串str中的指定位置pos开始取一个字串并返回 字符串从1开始，len表示截取多少个字符
+
+INSTR(str, substr)：从源字符串str中返回子串substr第一次出现的位置
+
+IFNULL(exp1,epx2) 判断exp1是否是null,是就返回exp2，否则返回exp1，注意exp1为空字符串时返回的还是exp1
+
+NULLIF(exp1,exp2) 判断exp1和exp2是否相等，如果相等就返回null,不相等就返回exp1
+
