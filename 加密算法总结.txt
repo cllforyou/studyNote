@@ -1,0 +1,28 @@
+信息加密技术分为主要的三类：单向散列加密 对称加密 非对称加密
+单向散列加密就是对输入的不同长度的信息进行散列计算，得到固定长度的密文，密文不能计算得到明文
+常用的场景 在调用接口的时候，参数可以拼接成字符串然后再MD5加密，再把请求参数和MD5密文一起发送给服务器，服务器再同样的进行操作，比较密文是否正确，如果正确代表数据没有被篡改
+常用的算法 MD5 SHA MD5内部是基于hash算法，SHA就是安全hash算法
+java实现MD5，SHA算法可以使用java.security.MessageDigest类
+ MessageDigest md5 = MessageDigest.getInstance("MD5"); SHA的就对应SHA-1（不怎么安全） SHA SHA-256 SHA-512
+ 	/**
+     * 字节数组转16进制字符串
+     * 
+     * @param b
+     * @return 转换后的16进制字符串
+     */
+    private static String byteArrayToHexString(byte[] b) {
+        StringBuffer resultStr = new StringBuffer();
+        String hex;
+        for (int i = 0; i < b.length; i++) {
+            hex = Integer.toHexString(b[i] & 0xFF);
+            if(hex.length() == 1) {
+                hex = '0' + hex;
+            }
+            resultStr.append(hex);
+        }
+        return resultStr.toString();
+    }
+
+对称加密算法就是加密和接密运用同一个密钥，明文和密文可以相互转换 常用的有DES RC
+
+非对称加密算法就是密钥是一对，公钥和私钥，用户拿到私钥对数据进行加密，将密文传输给服务器，服务器根据公钥来解密密文，公钥和私钥不能相互间推倒出来 常用的算法有RSA（支付宝使用）
