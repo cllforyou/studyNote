@@ -20,3 +20,89 @@ setter注入
 
 自动装配
 利用注解
+
+自己封装了一个七牛工具类，利用spring框架管理，在生成的时候注入对应的名称空间等属性
+注入方式选择的是setter方法注入
+package cn.shuiyu.send.util;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Map;
+
+import com.qiniu.util.Auth;
+
+/**
+ * 七牛操作类
+ * @author Administrator
+ *
+ */
+public class QiNiuUtil {
+	
+	private static String ACCESS_KEY;
+	private static String SECRET_KEY;
+	private static Map<String, String> bucket;
+	
+	public static String getACCESS_KEY() {
+		return ACCESS_KEY;
+	}
+	public static void setACCESS_KEY(String aCCESS_KEY) {
+		ACCESS_KEY = aCCESS_KEY;
+	}
+	public static String getSECRET_KEY() {
+		return SECRET_KEY;
+	}
+	public static void setSECRET_KEY(String sECRET_KEY) {
+		SECRET_KEY = sECRET_KEY;
+	}
+	public Map<String, String> getBucket() {
+		return this.bucket;
+	}
+	public void setBucket(Map<String, String> bucket) {
+		this.bucket = bucket;
+	}
+	
+	/**
+	 * 获取对应平台的文件的上传Token
+	 * @param type
+	 * @param fileName
+	 * @return
+	 */
+	public String getUploadToken(String type,String fileName) {
+		Auth auth = Auth.create(ACCESS_KEY, SECRET_KEY);
+		String bucketname = bucket.get(type);
+		String upToken = auth.uploadToken(bucketname,fileName);
+		return upToken;
+	}
+	
+	/**
+	 * 根据文件名称和文件对应的平台编号获取文件的下载路径
+	 * @param type
+	 * @param fileName
+	 * @return
+	 */
+	public String getUploadUrl(String type,String fileName) {
+		String key = type + "_DOMAIN";
+		String domainOfBucket = bucket.get(key);
+		String encodedFileName = "";
+		try {
+			encodedFileName = URLEncoder.encode(fileName, "utf-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		String finalUrl = String.format("%s/%s", domainOfBucket, encodedFileName);
+		return finalUrl;
+	}
+}
+
+	<bean id="qiNiuUtil" class="cn.shuiyu.send.util.QiNiuUtil">
+		<property name="ACCESS_KEY" value="${ACCESS_KEY}"></property>
+		<property name="SECRET_KEY" value="${SECRET_KEY}"></property>
+		<property name="bucket">
+			<map>
+				<entry key="YTX" value="${YTX_BUCKET}"/>
+				<entry key="YTX_DOMAIN" value="${YTX_DOMAIN}"/>
+			</map>
+		</property>
+	</bean>
+
+spring中bean的生命周期

@@ -1,0 +1,8 @@
+XXE就是XML外部实体注入。当允许引用外部实体时，通过构造恶意内容，可导致读取任意文件、执行系统命令、探测内网端口、攻击内网网站等危害。
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE a [<!ENTITY passwd SYSTEM "file:///etc/passwd">]>
+<a>
+    <value>&passwd;</value>
+</a>
+XXE防护  https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Prevention_Cheat_Sheet#C.2FC.2B.2B
+就是禁用外部实体，主要是针对DTD约束的xml
