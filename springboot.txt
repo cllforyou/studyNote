@@ -1,0 +1,5 @@
+springboot
+1.pom文件简单
+2.xml文件简单‘
+3.编码简单
+4.部署简单 不需要打war包，再放到tomcat中跑 现在可以直接运行jar包

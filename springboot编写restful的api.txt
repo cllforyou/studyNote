@@ -1,0 +1,19 @@
+1.各种请求
+@GetMapping @PostMapping @PutMapping @DeleteMapping
+
+2.文件上传
+首先要设置consumes为multipart/form-data
+@PostMapping(value="/files",consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
+在方法中写参数：
+public Map<String,Object> uploadFile(@RequestParam("file")) MultipartFile file) 这样就可以了
+
+
+3.数据校验（不能相信前端传来的参数，对于前端传来的参数都需要进行校验，而且要尽量让前端少传参数过来）
+Bean Validation
+相关的注解需要熟练使用
+还可以自己实现注解自定义校验方式
+
+4.pojo的分类，不同的层级间的数据传递是否要用到不同的pojo对象（PO DTO）
+
+
+5.
