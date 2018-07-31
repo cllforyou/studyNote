@@ -16,4 +16,41 @@ Bean Validation
 4.pojo的分类，不同的层级间的数据传递是否要用到不同的pojo对象（PO DTO）
 
 
-5.
+5.springboot中添加mybatis
+pom.xml中添加依赖 启动类中添加注解，告诉spring框架扫描dao层的包 application.yml文件中配置属性（驱动属性，驼峰映射）
+这样简单的配置之后可以在dao层中通过注解写sql
+如何实现在xml文件中编写sql，如何实现通用mapper插件
+
+6.sprig中添加事务
+通过注解实现事务
+@Transactional注解
+主要参数
+name 当前配置文件中有多个TransactionManage，可以用该属性指定选择哪个事务管理器
+
+propagation 事务的传播行为，默认为REQUIRED
+	Propagation.REQUIRED 如果有事务，那么加入事务，如果没有新建一个（默认）
+	Propagation.NOT_SUPPORTED 容器不为这个方法开启事务
+	Propagation.REQUIRES_NEW 不管是否存在事务，都开启一个新的事务，原来的事务挂起，先执行新的事务，执行完毕再执行老的事务
+	Propagation.MANDATORY 必须在一个已有的事务中执行，否则抛出异常
+	Propagation.NEVER 必须在一个没有事务中执行，否则抛出异常
+
+isolation 事务的隔离度，默认采用DEFAULT
+	Isolation.READ_UNCOMMITTED 读未提交数据 有可能引起脏读
+	Isolation.READ_COMMITTED 读已提交数据
+	Isolation.REPEATABLE_READ 可重复读
+	Isolation.SERIALIZABLE 串型化
+	Isolation.DEFAULT 使用数据库默认（大部分的默认值都是读取已提交数据）
+
+timeout 事务的超时时间，默认值为-1.如果超过该时间限制但事务还没有提交，则会回滚事务
+
+readonly 指定事务是否为只读事务，默认值为false;为了忽略那些不需要事务的方法，设置为true的话可以提高方法的执行性能
+
+rollbackFor 指定能够触发事务回滚的异常类型
+noRollbackFor 指定的异常类型，不回滚事务
+spring在执行一个有事务的方法的时候，会给这个方法增加事务，如果这个方法在执行的时候抛出异常，spring判断的步骤如下
+	1.noRollbackFor或子类 COMMIT
+	2.rollbackFor或子类 ROLLBACK
+	3.throws定义的异常或子类 COMMIT
+	4.其他异常 ROLLBACK
+	5.无异常 COMMIT
+所以我们可以定义rollbackFor和noRollbackFor的类型来控制哪些异常是需要控制事务哪些是不需要控制事务的
