@@ -1,0 +1,246 @@
+1.tomcat参数设置
+jvm相关参数，在catalina.bat中修改，linux就是在catalina.sh文件中修改
+JAVA_OPTS=“-server -Xms1024m -Xmx1024m -Xmn384m -Xss512k -XX:NewSize=256m -XX:MaxNewSize=256m -XX:PermSize=256m -XX:MaxPermSize=256m”
+-Xms：表示 Java 初始化堆的大小，-Xms 与-Xmx 设成一样的值，避免 JVM 反复重新申请内存，导致性能大起大落，默认值为物理内存的 1/64，默认（MinHeapFreeRatio参数可以调整）空余堆内存小于 40% 时，JVM 就会增大堆直到 -Xmx 的最大限制。
+-Xmx：表示最大 Java 堆大小，当应用程序需要的内存超出堆的最大值时虚拟机就会提示内存溢出，并且导致应用服务崩溃，因此一般建议堆的最大值设置为可用内存的最大值的80%。如何知道我的 JVM 能够使用最大值，使用 java -Xmx512M -version 命令来进行测试，然后逐渐的增大 512 的值,如果执行正常就表示指定的内存大小可用，否则会打印错误信息，默认值为物理内存的 1/4，默认（MinHeapFreeRatio参数可以调整）空余堆内存大于 70% 时，JVM 会减少堆直到-Xms 的最小限制。
+-Xss：表示每个 Java 线程堆栈大小，JDK 5.0 以后每个线程堆栈大小为 1M，以前每个线程堆栈大小为 256K。根据应用的线程所需内存大小进行调整，在相同物理内存下，减小这个值能生成更多的线程，但是操作系统对一个进程内的线程数还是有限制的，不能无限生成，经验值在 3000~5000 左右。一般小的应用， 如果栈不是很深， 应该是128k 够用的，大的应用建议使用 256k 或 512K，一般不易设置超过 1M，要不然容易出现out ofmemory。这个选项对性能影响比较大，需要严格的测试。
+-XX:NewSize：设置新生代内存大小。sun官方推荐为整个堆的3/8 -Xmn 年轻带堆内存，sun官方推荐为整个堆的3/8 这两个是一个意思
+-XX:MaxNewSize：设置最大新生代新生代内存大小
+-XX:PermSize：设置持久代内存大小 主要用于存放Class文件
+-XX:MaxPermSize：设置最大值持久代内存大小，永久代不属于堆内存，堆内存只包含新生代和老年代。
+总堆内存 = 年轻带堆内存 + 年老带堆内存 + 持久带堆内存
+tomcat配置文件中的配置
+<Connector port="8080" protocol="HTTP/1.1"
+               maxPostSize="-1" 
+               maxHttpHeaderSize="8192"
+               maxThreads="1000"
+               minSpareThreads="100"
+               maxSpareThreads="1000"					
+               minProcessors="100"						
+               maxProcessors="1000"					
+               enableLookups="false"
+               compression="on"
+               compressionMinSize="2048"
+               compressableMimeType="text/html,text/xml,text/javascript,text/css,text/plain"
+               acceptCount="1000"
+               connectionTimeout="3000"
+               URIEncoding="utf-8"					
+               redirectPort="8443"
+               disableUploadTimeout="true" />
+               
+"maxPostSize"该参数限制了post方式上传文件的大小，当maxPostSize<=0时，POST方式上传的文件大小不会被限制，maxPostSize参数只有当request的Content-Type为“application/x-www-form-urlencoded”时起作用。
+"maxHttpHeaderSize"来自于客户端请求的Request和Response的HTTP,http请求头信息的最大程度，超过此长度的部分不予处理,一般8K。
+"maxThreads"客户请求最大线程数,Tomcat使用线程来处理接收的每个请求。这个值表示Tomcat可创建的最大的线程数。
+"minSpareThreads"最小空闲线程数,Tomcat初始化时创建的 socket 线程数.
+"maxSpareThreads"最大连接线程数，即：并发处理的最大请求数，默认值为75,一旦创建的线程超过这个值，Tomcat就会关闭不再需要的socket线程。
+"minProcessors"最小空闲连接线程数，用于提高系统处理性能，默认值为 10。
+"acceptCount"允许的最大连接数，应大于等于 maxProcessors ，默认值为 100。
+"enableLookups"若设为true, 则支持域名解析，可把 ip 地址解析为主机名,为了提高处理能力，应设置为false。
+"compression"打开压缩功能。
+"compressionMinSize "启用压缩的输出内容大小，这里面默认为2KB
+"compressableMimeType"压缩类型。
+"connectionTimeout"网络连接超时，单位：毫秒。设置为 0 表示永不超时，这样设置有隐患的。通常可设置为 30000 毫秒。
+"URIEncoding"URL统一编码 。
+"redirectPort"这里系统默认的，它指定转发端口，如果当前只支持non-SSL请求，在需要安全通信的场所，将把客户请求转发至SSL的redirectPort端口。
+"disableUploadTimeout"上传时是否使用超时机制,如果不指定，该属性为“false”。
+其中和最大连接数相关的参数为maxProcessors 和 acceptCount 。如果要加大并发连接数，应同时加大这两个参数。
+web server允许的最大连接数还受制于操作系统的内核参数设置，通常 Windows 是 2000 个左右， Linux 是 1000 个左右。
+
+2.nginx配置
+worker_processes 8; 
+工作进程：数目。根据硬件调整，通常等于CPU数量或者2倍于CPU。
+error_log  logs/error.log;  
+error_log  logs/error.log  notice;  
+error_log  logs/error.log  info;  
+错误日志：存放路径。
+events {
+    worker_connections  1024; 每个工作进程的最大连接数
+    keepalive_timeout 3000; 超时时间
+    client_header_buffer_size 4k; 客户端请求头部的缓冲区大小。
+}
+http {
+	log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+	'$status $body_bytes_sent "$http_referer" '
+	'"$http_user_agent" "$http_x_forwarded_for"';
+	log_format log404 '$status [$time_local] $remote_addr $host$request_uri $sent_http_location';
+	日志格式设置。
+	$remote_addr与$http_x_forwarded_for用以记录客户端的ip地址；
+	$remote_user：用来记录客户端用户名称；
+	$time_local： 用来记录访问时间与时区；
+	$request： 用来记录请求的url与http协议；
+	$status： 用来记录请求状态；成功是200，
+	$body_bytes_sent ：记录发送给客户端文件主体内容大小；
+	$http_referer：用来记录从那个页面链接访问过来的；
+	$http_user_agent：记录客户浏览器的相关信息；
+	access_log  logs/host.access.log  main;
+	access_log  logs/host.access.404.log  log404;
+	用了log_format指令设置了日志格式之后，需要用access_log指令指定日志文件的存放路径；
+	client_max_body_size 300m;
+	设定通过nginx上传文件的大小
+
+	server {
+	    listen 443;
+	    server_name www.ichongka.cn;
+	    ssl on;
+	    root html;
+	    index index.html index.htm;
+	    ssl_certificate  cert/214652901350452.pem;
+	    ssl_certificate_key  cert/214652901350452.key;
+	    ssl_session_timeout 5m;
+	    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+	    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+	    ssl_prefer_server_ciphers on;
+
+            location / {
+	       	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+	        proxy_set_header Host $http_host;
+	        proxy_set_header X-Forwarded-Proto https;
+	        proxy_redirect off;
+	        proxy_connect_timeout      240;
+	        proxy_send_timeout         240;
+	        proxy_read_timeout         240;
+	        client_max_body_size       10m;
+                # note, there is not SSL here! plain HTTP is used
+	        proxy_pass http://manage;
+	    }
+
+	    location /wxgz {
+	       	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+	        proxy_set_header Host $http_host;
+	        proxy_set_header X-Forwarded-Proto https;
+	        proxy_redirect off;
+	        proxy_connect_timeout      240;
+	        proxy_send_timeout         240;
+	        proxy_read_timeout         240;
+                client_max_body_size       10m;
+	        # note, there is not SSL here! plain HTTP is used
+	        proxy_pass http://weixinguaizhua;
+	    }
+
+	    
+	}
+
+	server {
+        listen       80;
+        server_name  petphoto.ichongka.cn;
+        location / {
+            proxy_pass   http://118.31.73.113:8091;
+            proxy_connect_timeout  1;
+        }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+
+    server {
+        listen       80;
+        server_name  smallapp.ichongka.cn;
+        location / {
+            proxy_pass   http://118.31.73.113:8092;
+            proxy_connect_timeout  1;
+        }
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+
+
+	upstream manage {
+    	server 118.31.73.113:8090; 
+	}
+
+	upstream weixinguaizhua {
+    	server 118.31.73.113:8080; 
+	}	
+}
+
+nginx还可以对ip进行限流操作，在http模块当中配置
+ngx_http_limit_conn_module模块 此模块用来限制单IP的连接数
+在nginx配置文件中的http配置模块添加： limit_conn_zone key zone=name:size;
+limit_conn_zone $binary_remote_addr zone=addr:10m; 定义一个key为$binary_remote_addr、名字为addr、空间大小为10M的limit_conn_zone
+再在http->server->location配置模块中添加：limit_conn zone number;
+ngx_http_limit_req_module模块 此模块用来限制单IP的请求频率
+在nginx配置文件中的http配置模块添加： limit_req_zone key zone=name:size rate[rate];
+开辟一个内存空间，为不同的key值保存状态，状态属性里面有当前来的次数数。key可以为变量，这里的key为$binary_remote_addr,即远程服务器的地址。name为该空间的命名，size为大小,rate为限制的频率。
+再在http->server->location配置模块中添加：limit_req_zone=name [brust=number] [nodelay];
+
+nginx中还可以配置静态图片资源的缓存
+
+3.mysql参数配置 修改mysql的参数配置可以在my.cnf文件中进行配置，如果直接通过命令配置的话重启mysql就会失效
+mysql
+首先通过命令查看相关参数情况
+show variables like 'max_connections';(查可以看当前的最大连接数，默认的最大连接数5.5之前应该都是100，之后是151)
+set global max_connections=1000;(设置最大连接数为1000，可以再次查看是否设置成功)
+MySQL为每个连接分配线程来处理，可以通过threads_connected参数查看当前分配的线程数量：
+show status like '%thread%';  show processlist;只列出前100条，如果想全列出请使用show full processlist; 
+Variable_name   | Value |
++-------------------+-------+
+| Threads_cached  | 1   |   可以缓存的连接数
+| Threads_connected | 1   | 当前的连接数
+| Threads_created  | 2   |  当前创建的线程数
+| Threads_running  | 1  
+
+wait_timeout=1800（单位为秒）表示非交互连接等待活动的秒数（jdbc的连接方式），如果一个连接超过这个时间还没有活动的话，这个连接就会被关闭
+
+show status like '%connections%';
+Variable_name           | Value |
++-----------------------------------+-------+
+| Connection_errors_max_connections | 0   |
+| Connections            | 197  |    表示MySQL从启动至今，成功建立连接的连接数，这个值是不断累加的。
+| Max_used_connections       | 2   | 表示MySQL从启动至今，同一时刻并发的连接数，取得是最大值。
+
+数据库连接池配置
+<bean id="dataSource" class="com.jolbox.bonecp.BoneCPDataSource"  
+        destroy-method="close">  
+        <!-- 数据库驱动 -->  
+        <property name="driverClass" value="${aliLibrary.db.driverClass}" />  
+        <!-- 相应驱动的jdbcUrl,你懂的 -->  
+        <property name="jdbcUrl" value="${aliLibrary.db.jdbcUrl}" />  
+        <!-- 数据库的用户名 -->  
+        <property name="username" value="${aliLibrary.db.username}" />  
+        <!-- 数据库的密码 -->  
+        <property name="password" value="${aliLibrary.db.password}" />  
+        <!-- 检查数据库连接池中空闲连接的间隔时间，单位是分，默认值：240，如果要取消则设置为0 -->  
+        <property name="idleConnectionTestPeriod" value="${aliLibrary.db.idleConnectionTestPeriod}" />  
+        <!-- 连接池中未使用的链接最大存活时间，单位是分，默认值：60，如果要永远存活设置为0 -->  
+        <property name="idleMaxAge" value="${aliLibrary.db.idleMaxAge}" />  
+        <!-- 每个分区最大的连接数 -->  
+        <property name="maxConnectionsPerPartition" value="${aliLibrary.db.maxConnectionsPerPartition}" />  
+        <!-- 每个分区最小的连接数，在第一次连接数据库的时候就会创建这么多的连接放在这里的 -->  
+        <property name="minConnectionsPerPartition" value="${aliLibrary.db.minConnectionsPerPartition}" />  
+        <!-- 分区数 ，默认值2，最小1，推荐3-4，视应用而定-->  
+        <property name="partitionCount" value="${aliLibrary.db.partitionCount}" />  
+        <!-- 每次去拿数据库连接的时候一次性要拿几个,默认值：2 -->  
+        <property name="acquireIncrement" value="${aliLibrary.db.acquireIncrement}" />  
+        <!-- 缓存prepared statements的大小，默认值：0 -->  
+        <property name="statementsCacheSize" value="${aliLibrary.db.statementsCacheSize}" />  
+        <!-- 每个分区释放链接助理进程的数量，默认值：3，除非你的一个数据库连接的时间内做了很多工作，不然过多的助理进程会影响你的性能 -->  
+        <property name="releaseHelperThreads" value="${aliLibrary.db.releaseHelperThreads}" />  
+    </bean>  
+
+安装配置
+关于搜索引擎的配置
+mysql中间件
+可以使用mycat
+
+4.redis配置
+基本配置
+protected-mode yes 保护模式，需要密码才可以访问，最好设置为需要密码访问，不然的话容易中毒（redis蠕虫）
+port 6379
+timeout 60 指定在一个 client 空闲多少秒之后关闭连接
+daemonize yes 
+requirepass foobared 设置密码
+maxmemory 3gb redis占用内存的上限
+
+
+
+单节点
+分片
+哨兵
+集群
+
+
+
+5.消息队列 rabbitmq

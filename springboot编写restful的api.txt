@@ -54,3 +54,85 @@ spring在执行一个有事务的方法的时候，会给这个方法增加事�
 	4.其他异常 ROLLBACK
 	5.无异常 COMMIT
 所以我们可以定义rollbackFor和noRollbackFor的类型来控制哪些异常是需要控制事务哪些是不需要控制事务的
+
+
+7.mybatis进阶
+mybatis实现查询一对多 比如一个订单对象中，包含地址信息对象，所关联的商品组，我们可以通过查询订单这一个sql就把其中关联的对象都查询出来，即实现一对一，也实现一对多，这样的话就是要进行关联查询了，如果不这样实现的话，只是查询单表的话，以前一个sql能解决的问题就需要多条sql解决，也就是一条sql关联查询和多条sql单表查询的问题
+
+mybatis实现数据库中存储array，json类型的数据（这个需要实现typeHandler，然后再xml文件中指定列的类型为我们定义的typeHandler，就是把bean中与属性类型的映射关系告诉mybatis这样在插入和查询的时候就能把特殊类型的数据映射出来）
+
+8.spring security（也可以使用apach shrio）
+实现api访问时候进行权限验证
+实现原理就是用户登录之后，服务器判断用户是否存在，存在就返回一个token给用户，在返回之前会创建token对应的用户权限信息，这个信息可以保存到数据库，也可以保存到缓存中，然后用户再请求别的接口的时候需要携带token，可以在拦截器中判断token对应的用户权限，查到的话就放到spring对应的类之中，然后用户的请求进入controller,在controller的方法上面增加注解，判断这个方法需要哪些权限，spring根据注解就去之前存放用户权限的类中查找对应的权限，如果是有的就通过，如果没有的话就会报403错误
+token对应的用户权限类是 UserDetails
+把UserDetails设置到SecurityContextHolder内，以spring使用
+UsernamePasswordAuthenticationToken authentication = 
+	new UsernamePasswordAuthenticationToken(user, null,user.getAuthorities());
+authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+SecurityContextHolder.getContext().setAuthentication(authentication);
+
+OAuth 2.0  实现流程，使用场景是什么 
+JWT？如何使用在项目中？
+
+
+
+9.spring中异步执行程序
+@Async注解 异步执行方法
+@Scheduling注解 定时任务 如果两个方法需要在同一时间执行，那就需要开启多个线程执行定时任务，spring默认的执行定时任务的线程只有一个，所以要实现的话需要开启多个线程，可以实现一个类，告诉spring默认的线程数
+分布式定时任务 需要使用Quartz Scheduler???
+
+
+10.spring实现webSocket
+
+11.spring项目优化
+
+
+12.API的版本控制
+如果对于不是强制更新的APP，在生产环境中会遇到问题，如果后台的版本已经更新了2.0版本了，那么1.0版本的APP访问服务器肯定就会出现问题了，所以服务器要考虑各种版本的访问
+要获取客户端传来的版本信息
+传递方式可以是url中带有，也可以是request header中带有
+
+13.springboot打包项目部署
+打jar包 直接使用mvn build 命令设置package
+部署到服务器中运行的命令
+在ubuntu系统中可以创建启动文件
+在/etc/sysyemd/system目录下创建xxx.service 文件内容如下
+[Unit]
+Description=ytx
+After=syslog.target
+
+[Service]
+ExecStart=/usr/bin/java -jar -Xms1G -Xmx1G -Dserver.port=8080 -Dautostart=true -Dk=log.level.console=WARN /web/webapps/ytx-1.0.0.jar --spring.profiles.active=production
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
+再运行下面两个命令
+systemctl enable xxx.service
+systemctl daemon-reload
+如果需要重启服务
+service xxx restart
+
+打war包部署
+1、修改启动类，就是哪个有@SpringBootApplication注解的类，让这个类继承org.springframework.boot.web.servlet.support.SpringBootServletInitializer,
+2、修改pom.xml文件，需要该2处：
+a：把<packaging>jar</packaging>中的jar改成war
+b：修改依赖spring-boot-starter-data-rest，排除掉内嵌的tomcat，并增加servlet-api
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-rest</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<dependency>
+    <groupId>javax.servlet</groupId>
+    <artifactId>javax.servlet-api</artifactId>
+    <scope>provided</scope>
+</dependency>
+3、用mvn package命令重新编译，如果编译出来的war文件，这个war在tomcat 8.5下就能用了。
+注意：
+spring boot 2.0的项目是不能在比tomcat 8.5低的版本上运行的。如果你的运行不起来可以检查下tomcat版本。 

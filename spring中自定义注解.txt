@@ -1,0 +1,105 @@
+项目中自定义注解实现通过注解读取配置文件中的值
+自定义的注解
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface PropertyConfig {
+    String value() default "";
+
+    boolean required() default true;
+}
+首先我们可以使用spring自带的占位符去读取配置文件中的信息
+public class ExtendedPropertyPlaceholderConfigurer extends PropertyPlaceholderConfigurer {
+	private Properties props;
+
+	@Override
+	protected void processProperties(ConfigurableListableBeanFactory beanFactory, Properties props)
+			throws BeansException {
+		super.processProperties(beanFactory, props);
+		this.props = props;
+	}
+
+	public String getProperty(String key) {
+		return props.getProperty(key);
+	}
+}
+<!-- 使用spring自带的占位符替换功能，可以实现注解方式获取属性文件中的配置值 -->
+	<bean class="cn.cwapp.cp_commons.spring.exetend.ExtendedPropertyPlaceholderConfigurer">
+ 		<!-- 允许JVM参数覆盖 --> 
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+ 		<!-- 忽略没有找到的资源文件 --> 
+		<property name="ignoreResourceNotFound" value="true" />
+ 		<!-- 配置资源文件 --> 
+		<property name="locations">
+			<list>
+				<value>classpath:db-mysql-local.properties</value>
+				<value>classpath:log4j-local.properties</value>
+				<value>classpath:redis-local.properties</value>
+				<value>classpath:env.properties</value>
+				<value>classpath:httpclient.properties</value>
+				
+			</list>
+		</property>
+	</bean>
+
+接下来的工作就是将获取到的值注入到伪service类中
+@Service
+public class PropertieService {
+
+    @PropertyConfig
+    public String MANAGE_PATH;
+    
+    @PropertyConfig
+    public String SEND_PATH;
+
+}
+
+伪service类中的属性名称需要和配置文件中的属性名称一致
+在每个属性名称上面加上自定义注解，再写对应注入的方法
+@Service
+public class ConfigAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter {
+	@Autowired
+	private ExtendedPropertyPlaceholderConfigurer propertyConfigurer;
+
+	private SimpleTypeConverter typeConverter = new SimpleTypeConverter();
+
+	/**
+	 * <p>
+	 * 通过config配置变量,bean初始化以后设置properties文件里面的值
+	 * </p> {@inheritDoc}
+	 */
+	@Override
+	public boolean postProcessAfterInstantiation(final Object bean, String beanName) throws BeansException {
+		ReflectionUtils.doWithFields(bean.getClass(), new ReflectionUtils.FieldCallback() {
+			public void doWith(Field field) throws IllegalArgumentException, IllegalAccessException {
+				PropertyConfig cfg = field.getAnnotation(PropertyConfig.class);
+				if (cfg != null) {
+					if (Modifier.isStatic(field.getModifiers())) {
+						throw new IllegalStateException("@PropertyConfig annotation is not supported on static fields");
+					}
+					String key = cfg.value().length() <= 0 ? field.getName() : cfg.value();
+					Object value = propertyConfigurer.getProperty(key);
+					if (cfg.required() && value == null) {
+						throw new NullPointerException(bean.getClass().getSimpleName() + "." + field.getName()
+								+ "is requred,but not been configured");
+					} else if (value != null) {
+						Object _value = typeConverter.convertIfNecessary(value, field.getType());
+						ReflectionUtils.makeAccessible(field);
+						field.set(bean, _value);
+					}
+				}
+			}
+		});
+
+		return true;
+	}
+}
+这个方法的实现逻辑就是在spring加载好所有的类之后，对每一个创建出来的类都进行检查，利用反射获取类的属性，再判断属性上面是否有自定义的注解，如果有的话就注入配置文件中的属性，如果没有就不需要
+
+ConfigAnnotationBeanPostProcessor这个service类就是负责属性注入的
+在方法中先通过注解获取属性名称，在利用占位符根据属性名获取对应的值，再通过反射将值赋值给伪service中；
+
+实现这个功能其实主要涉及到4个对象
+PropertyConfig  自定义注解，将这个注解加到类的属性上，相当于在需要注入的属性上面增加标记
+PropertieService  这是要在业务service中注入的，真正写代码中使用到的，就是放置每个配置文件中的属性值的容器。通过这个容器直接获取到值（需要spring创建）
+ExtendedPropertyPlaceholderConfigurer  spring自带的占位符，可以通过配置文件中属性名称获取配置文件中的值 （需要spring创建，而且需要配置xml）
+ConfigAnnotationBeanPostProcessor 链接以上3个对象，通过自定义注解配合反射获取属性名称传给spring自带的占位符，再获取到配置文件中的值，再赋值给伪（需要spring创建）service类，用户再使用伪service类开发代码
