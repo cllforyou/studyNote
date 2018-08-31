@@ -1,2 +1,185 @@
 JMS
 JMS即java消息服务应用程序接口是一个java平台中关于面向消息中间的API
+
+消息队列的好处
+1.异步 在一个方法中需要执行的操作，可以抽取出来异步处理(发送邮件，短信，推送提醒，缓存操作)
+2.提高并发量 对于同一时间的大量请求，可以先写到消息队列中，之后再慢慢的消费掉
+3.解耦 生产者，消费者的模式，对于同一个业务，生产者只需要将消息写入队列，消费者只需要从队列中拿数据，两者只需要和消息队列交互，两者之间解耦
+
+rabbitmq
+安装
+windwos
+首先安装erlang
+官网：http://www.erlang.org
+下载网址：http://www.erlang.org/download.html
+再安装rabbitmq
+下载网址：http://www.rabbitmq.com/download.html
+1、点击：RabbitMQ Command Prompt (sbin dir)
+2、输入命令 rabbitmq-plugins enable rabbitmq_management
+linux安装
+添加yum支持
+cd /usr/local/src/
+mkdir rabbitmq
+cd rabbitmq
+在线安装（比较慢）
+wget http://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
+rpm –Uvh erlang-solutions-1.0-1.noarch.rpm
+rpm –import http://packages/erlang-solutions.com/rpm/erlang_solutions.asc
+sudo yum install erlang
+或者手动安装
+下载：https://packages.erlang-solutions.com/erlang/esl-erlang-src/otp_src_17.0-rc2.tar.gz
+上传esl-erlang_17.3-1~centos~6_amd64.rpm
+执行 yum install esl-erlang_17.3-1~centos~6_amd64.rpm
+上传esl-erlang-compat-R14B-1.el6.noarch.rpm
+yum install esl-erlang-compat-R14B-1.el6.noarch.rpm
+
+安装RabbitMQ
+上传rabbitmq-server-3.6.1-1.noarch.rpm文件到/usr/local/src/rabbitmq/
+安装： rpm –ivh rabbitmq-server.3.6.1-1.noarch.rpm
+
+	public static Connection getConnection() throws Exception {
+        //定义连接工厂
+        ConnectionFactory factory = new ConnectionFactory();
+        //设置服务地址
+        factory.setHost("localhost");
+        //端口，HTTP管理端口默认15672，访问端口默认5672
+        factory.setPort(5672);
+        //设置账号信息，用户名、密码、vhost
+        factory.setVirtualHost("jtmq");		//注意这个值，vh配置如果加了斜杠，这里也必须加
+        factory.setUsername("jtmqadmin");
+        factory.setPassword("123456");
+        // 通过工程获取连接
+        Connection connection = factory.newConnection();
+        return connection;
+    }
+
+public class Send {
+
+    private final static String QUEUE_NAME = "test_queue";
+
+    public static void main(String[] argv) throws Exception {
+        // 获取到连接以及mq通道
+        Connection connection = ConnectionUtil.getConnection();
+        // 从连接中创建通道
+        Channel channel = connection.createChannel();
+
+        // 声明（创建）队列
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+
+        // 消息内容
+        String message = "Hello World!";
+        channel.basicPublish("", QUEUE_NAME, null, message.getBytes());
+        System.out.println(" [x] Sent '" + message + "'");
+
+        //关闭通道和连接
+        channel.close();
+        connection.close();
+    }
+}
+
+public class Recv {
+
+    private final static String QUEUE_NAME = "test_queue";
+
+    public static void main(String[] argv) throws Exception {
+
+        // 获取到连接以及mq通道
+        Connection connection = ConnectionUtil.getConnection();
+        Channel channel = connection.createChannel();
+
+        // 声明队列
+        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+
+        // 定义队列的消费者
+        QueueingConsumer consumer = new QueueingConsumer(channel);
+        // 监听队列
+        channel.basicConsume(QUEUE_NAME, true, consumer);
+
+        // 获取消息
+        while (true) {
+            QueueingConsumer.Delivery delivery = consumer.nextDelivery();
+            String message = new String(delivery.getBody());
+            System.out.println(" [x] Received '" + message + "'");
+        }
+    }
+}
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+	xsi:schemaLocation="http://www.springframework.org/schema/rabbit
+	http://www.springframework.org/schema/rabbit/spring-rabbit-1.4.xsd
+	http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-4.1.xsd">
+
+	<!-- 定义RabbitMQ的连接工厂 -->
+	<rabbit:connection-factory id="connectionFactory"
+		host="${rabbit.ip}" port="${rabbit.port}" username="${rabbit.username}" password="${rabbit.password}"
+		virtual-host="${rabbit.vhost}" />
+
+	<!-- 定义Rabbit模板，指定连接工厂以及定义exchange -->
+	<rabbit:template id="amqpTemplate" connection-factory="connectionFactory"
+		exchange="itemDirectExchange" />
+
+	<!-- MQ的管理，包括队列、交换器等 -->
+	<rabbit:admin connection-factory="connectionFactory" />
+	
+	<!-- 定义消息队列 durable:是否持久化 ； exclusive: 仅创建者可以使用的私有队列，断开后自动删除；auto_delete: 当所有消费客户端连接断开后，是否自动删除队列.-->
+	<rabbit:queue name="shuiyu.itemQueue" auto-declare="true"/>
+
+	<!-- 定义交换器，自动声明,持久化 -->
+	<rabbit:direct-exchange name="itemDirectExchange" auto-declare="true" durable="true">
+		<rabbit:bindings>
+			<!-- 前台系统只接收商品更新的消息 -->
+			<rabbit:binding queue="shuiyu.itemQueue" key="test_update"/>
+		</rabbit:bindings>
+	</rabbit:direct-exchange>
+	
+	<!-- 定义监听 -->
+	<rabbit:listener-container connection-factory="connectionFactory">
+		<rabbit:listener ref="rabbitItemService" method="updateItem" queue-names="shuiyu.itemQueue"/>
+	</rabbit:listener-container>
+
+</beans>
+
+配置文件中消息应答默认是自动应答的，为了防止消息丢失，我们需要设置为手动应答
+	<rabbit:listener-container connection-factory="connectionFactory" acknowledge="manual">
+		<rabbit:listener ref="rabbitItemService" method="updateItem" queue-names="shuiyu.itemQueue"/>
+	</rabbit:listener-container>
+新建一个类 RabbitItemService ，并实现接口  ChannelAwareMessageListener ，实现onMessage方法，不需要指定方法。
+	public void onMessage(Message message, Channel channel) throws Exception {
+		System.out.println("消费了消息："+new String(message.getBody()));
+		//第一个参数 deliveryTag：就是接受的消息的deliveryTag,可以通过msg.getMessageProperties().getDeliveryTag()获得
+     	//第二个参数 multiple：如果为true，确认之前接受到的消息；如果为false，只确认当前消息。如果为true就表示连续取得多条消息才发会确认
+		channel.basicAck(message.getMessageProperties().getDeliveryTag(), true);
+		//表示拒绝消息，拒绝的消息会重新回到队列的头部，第二个参数表示一次是否可以拒绝之前的多条，第三个参数表示拒绝的消息是否会回到队列中，true表		//示会
+		channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, true);
+		
+	}
+需要解决的问题
+rabbitmq如何处理unacked的消息
+首先设置手动应答，如果发送过来的消息消费者处理的时候出现异常，在异常处理中我们需要将这条异常的消息再次发送给mq，并且指定到一个异常的队列中，再设置消息应答，之后只要处理异常队列中的消息就可以了
+如果消费者服务宕机了，消息会进入unacked中，只要消费者重新启动就会回到ready中继续消费
+
+如果消息发送失败，应该怎么解决？
+首先进行重试，重试三次，第一次停顿1秒，第二次停顿5秒，第三次停顿20秒。停顿间隔根据具体情况进行调整。第二，通知相关负责人进行处理，发邮件，发短信。第三，记录日志。第四，将发送失败的数据保存下来，并且有错误回复机制。如将失败的数据写入数据库，写专门的程序从数据库中读取数据重新发送。
+<!-- 给模板指定转换器 --><!-- mandatory必须设置true,return callback才生效 -->
+	<rabbit:template id="amqpTemplate"	connection-factory="connectionFactory" 
+		confirm-callback="confirmCallBackListener" //发送成功时回调的方法
+		return-callback="returnCallBackListener"  //发送失败时回调的方法
+		mandatory="true" 
+	/>
+public class ConfirmCallBackListener implements ConfirmCallback{
+	@Override
+	public void confirm(CorrelationData correlationData, boolean ack, String cause) {
+		System.out.println("confirm--:correlationData:"+correlationData+",ack:"+ack+",cause:"+cause);
+	}
+}
+
+public class ReturnCallBackListener implements ReturnCallback{
+	@Override
+	public void returnedMessage(Message message, int replyCode, String replyText, String exchange, String routingKey) {
+		System.out.println("return--message:"+new String(message.getBody())+",replyCode:"+replyCode+",replyText:"+replyText+",exchange:"+exchange+",routingKey:"+routingKey);
+	}
+}
+
+
